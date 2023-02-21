@@ -5,6 +5,7 @@ import receiveMessage from './subscriber/receive';
   try {
     sendMessge();
     receiveMessage();
+    receiveMessage();
   } catch (error) {
     console.log(error);
   }
