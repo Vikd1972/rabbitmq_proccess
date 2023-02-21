@@ -1,0 +1,47 @@
+{
+  "name": "rabbitmq_proccess",
+  "version": "0.1.0",
+  "author": "VikDm",
+  "license": "ISC",
+  "description": "My first rabbitmq app.",
+  "main": "build/server.js",
+  "scripts": {
+    "postinstall": "husky install",
+    "start": "nodemon --watch 'src/**/*.ts' --exec \"ts-node\" src/app.ts",
+    "compile": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf build",
+    "build": "npm run clean && npm run compile",
+    "typeorm-cli": "ts-node node_modules/typeorm/cli.js --dataSource src/db/dataSource.ts",
+    "db:sync": "npm run typeorm-cli -- migration:generate -p src/db/migrations/sync",
+    "db:migrate:up": "npm run typeorm-cli -- migration:run",
+    "db:migrate:down": "npm run typeorm-cli -- migration:revert",
+    "lint": "eslint . -c .eslintrc.js --ext .ts --ignore-path .eslintignore",
+    "lint:fix": "eslint . -c .eslintrc.js --ext .ts --ignore-path .eslintignore --fix"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "encoding": "^0.1.13",
+    "express": "^4.18.2",
+    "http-status-codes": "^2.2.0",
+    "node-fetch": "^2.6.8"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.1",
+    "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.14",
+    "@types/node": "^18.11.10",
+    "@types/node-fetch": "^2.6.2",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.29.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.27.5",
+    "husky": "^8.0.2",
+    "nodemon": "^2.0.20",
+    "request": "^2.88.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.8.4"
+  }
+}
