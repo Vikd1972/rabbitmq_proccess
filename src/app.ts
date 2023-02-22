@@ -1,13 +1,10 @@
-/* eslint-disable no-console */
 import receiveMessage from './subscriber/receive';
+import showMessage from './utils/showMessage';
 
 (async () => {
   try {
-    receiveMessage(['30']);
-    // receiveMessage(['kern.*']);
-    // receiveMessage(['*.critical']);
-    // receiveMessage(['kern.*', '*.critical']);
+    receiveMessage(['manage']);
   } catch (error) {
-    console.log(error);
+    showMessage('ERROR', 'server', error.message);
   }
 })();

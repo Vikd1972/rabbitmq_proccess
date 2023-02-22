@@ -1,17 +1,11 @@
-/* eslint-disable no-console */
 import amqp from 'amqplib/callback_api';
 
-const generateUuid = () => {
-  return Math.random().toString() +
-    Math.random().toString() +
-    Math.random().toString();
-};
+import worker from './worker';
+import showMessage from '../utils/showMessage';
 
 const receiveMessage = (args: string[]) => {
-  // const args = process.argv.slice(2);
-
   if (args.length === 0) {
-    console.log('Usage: rpc_client.js num');
+    showMessage('WARN', 'subscriber.receive', 'Input required');
     process.exit(1);
   }
 
@@ -23,35 +17,37 @@ const receiveMessage = (args: string[]) => {
       if (error1) {
         throw error1;
       }
+      const exchange = 'direct_logs';
+
+      channel.assertExchange(exchange, 'direct', {
+        durable: false,
+      });
+
       channel.assertQueue('', {
         exclusive: true,
       }, (error2, q) => {
         if (error2) {
           throw error2;
         }
-        const correlationId = generateUuid();
-        const num = parseInt(args[0], 10);
+        showMessage('INFO', 'subscriber.receive', `Waiting for logs. To exit press CTRL+C, severity: '${args[0]}'`);
 
-        console.log(' [x] Requesting fib(%d)', num);
+        args.forEach((severity) => {
+          channel.bindQueue(q.queue, exchange, severity);
+        });
 
         channel.consume(q.queue, (msg) => {
-          if (msg.properties.correlationId === correlationId) {
-            console.log(' [.] Got %s', msg.content.toString());
-            setTimeout(() => {
-              connection.close();
-              process.exit(0);
-            }, 1500);
+          showMessage('INFO', 'subscriber.receive', `${msg.fields.routingKey}: ${msg.content}`);
+
+          if (msg.fields.routingKey === 'manage' && msg.content) {
+            const arrayOfQueue = (msg.content).toString().split(' ');
+            for (let i = 0; i < +arrayOfQueue[0]; i++) {
+              const queue = arrayOfQueue[1];
+              worker(queue, i);
+            }
           }
         }, {
           noAck: true,
         });
-
-        channel.sendToQueue('rpc_queue',
-          Buffer.from(num.toString()),
-          {
-            correlationId,
-            replyTo: q.queue,
-          });
       });
     });
   });
