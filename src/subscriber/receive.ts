@@ -5,7 +5,7 @@ const receiveMessage = (args: string[]) => {
   // const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    console.log('Usage: receive_logs_direct.js [info] [warning] [error]');
+    console.log('Usage: receive_logs_topic.js <facility>.<severity>');
     process.exit(1);
   }
 
@@ -17,9 +17,9 @@ const receiveMessage = (args: string[]) => {
       if (error1) {
         throw error1;
       }
-      const exchange = 'direct_logs';
+      const exchange = 'topic_logs';
 
-      channel.assertExchange(exchange, 'direct', {
+      channel.assertExchange(exchange, 'topic', {
         durable: false,
       });
 
@@ -29,14 +29,14 @@ const receiveMessage = (args: string[]) => {
         if (error2) {
           throw error2;
         }
-        console.log(' [*] Waiting for logs. To exit press CTRL+C', q.queue);
+        console.log(' [*] Waiting for logs. To exit press CTRL+C', args);
 
-        args.forEach((severity) => {
-          channel.bindQueue(q.queue, exchange, severity);
+        args.forEach((key) => {
+          channel.bindQueue(q.queue, exchange, key);
         });
 
         channel.consume(q.queue, (msg) => {
-          console.log(" [x] queue: %s; %s: '%s'", q.queue, msg.fields.routingKey, msg.content.toString());
+          console.log(" [x] args: %s; %s:'%s'", args, msg.fields.routingKey, msg.content.toString());
         }, {
           noAck: true,
         });
