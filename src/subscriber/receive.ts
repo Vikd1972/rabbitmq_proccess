@@ -1,11 +1,17 @@
 /* eslint-disable no-console */
 import amqp from 'amqplib/callback_api';
 
+const generateUuid = () => {
+  return Math.random().toString() +
+    Math.random().toString() +
+    Math.random().toString();
+};
+
 const receiveMessage = (args: string[]) => {
   // const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    console.log('Usage: receive_logs_topic.js <facility>.<severity>');
+    console.log('Usage: rpc_client.js num');
     process.exit(1);
   }
 
@@ -17,29 +23,35 @@ const receiveMessage = (args: string[]) => {
       if (error1) {
         throw error1;
       }
-      const exchange = 'topic_logs';
-
-      channel.assertExchange(exchange, 'topic', {
-        durable: false,
-      });
-
       channel.assertQueue('', {
         exclusive: true,
       }, (error2, q) => {
         if (error2) {
           throw error2;
         }
-        console.log(' [*] Waiting for logs. To exit press CTRL+C', args);
+        const correlationId = generateUuid();
+        const num = parseInt(args[0], 10);
 
-        args.forEach((key) => {
-          channel.bindQueue(q.queue, exchange, key);
-        });
+        console.log(' [x] Requesting fib(%d)', num);
 
         channel.consume(q.queue, (msg) => {
-          console.log(" [x] args: %s; %s:'%s'", args, msg.fields.routingKey, msg.content.toString());
+          if (msg.properties.correlationId === correlationId) {
+            console.log(' [.] Got %s', msg.content.toString());
+            setTimeout(() => {
+              connection.close();
+              process.exit(0);
+            }, 1500);
+          }
         }, {
           noAck: true,
         });
+
+        channel.sendToQueue('rpc_queue',
+          Buffer.from(num.toString()),
+          {
+            correlationId,
+            replyTo: q.queue,
+          });
       });
     });
   });
