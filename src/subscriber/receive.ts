@@ -29,10 +29,10 @@ const receiveMessage = () => {
         channel.bindQueue(q.queue, exchange, 'manage');
 
         channel.consume(q.queue, (msg) => {
-          const linkId = +(msg.content).toString();
+          const data = (msg.content).toString();
 
-          showMessage('INFO', 'subscriber.receive', `Link id received: ${linkId}`);
-          jobHandler(linkId);
+          showMessage('INFO', 'subscriber.receive', `Link id received: ${data}`);
+          jobHandler(data);
         }, {
           noAck: true,
         });

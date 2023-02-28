@@ -5,6 +5,7 @@ import type { Browser } from 'puppeteer-core';
 
 import type { ILink } from '../types';
 import searhLinks from './searchLinks';
+import parallelParsing from './parallelParsing';
 import updateLink from '../api/updateLink';
 import createPuppeteerPage from '../utils/createPuppeteerPage';
 import showMessage from '../utils/showMessage';
@@ -30,7 +31,11 @@ const init = async (itemLink: ILink) => {
 
       const linksList = await searhLinks(page, itemLink);
 
-      return { linksList, browser, taskDuration: getMetrics.TaskDuration };
+      return {
+        linksList,
+        browser,
+        taskDuration: getMetrics.TaskDuration,
+      };
     } catch (error) {
       showMessage('ERROR', 'parsingLinks.init', `${error}`);
       attempt++;
@@ -39,17 +44,22 @@ const init = async (itemLink: ILink) => {
   }
 };
 
-const parsingLinks = async (itemLink: ILink) => {
+const parsingLinks = async (itemLink: ILink, numberOfStreams: number) => {
   const { linksList, browser, taskDuration } = await init(itemLink);
-  console.log('parsingLinks', linksList);
+
   const newItemLink = {
     ...itemLink,
     taskDuration,
     numberOfLinks: linksList.length,
     isChecked: true,
   };
-  console.log('parsingLinks.newItemLink', newItemLink);
+
   updateLink(newItemLink);
+
+  linksList.length = 10;
+
+  await parallelParsing(linksList, numberOfStreams, browser);
+
   // let listOfLinks = linksList.filter((item) => item.isChecked === false);
   // do {
   //   showMessage('WARN', 'parsingAvitoLinls', `number of new array links ${listOfLinks.length}`);

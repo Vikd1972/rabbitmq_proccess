@@ -2,12 +2,7 @@
 import type { Page } from 'puppeteer-core';
 import type { ILink } from '../types';
 
-const listOfLinks: Array<{
-  title: string;
-  path: string;
-  idRootPage: number;
-  isChecked: boolean;
-}> = [];
+const listOfLinks: Array<ILink> = [];
 
 const searhLinks = async (page: Page, itemLink: ILink) => {
   const searchArea = await page.$('[id="app"]');
@@ -31,7 +26,10 @@ const searhLinks = async (page: Page, itemLink: ILink) => {
         .split('"')[0]
         .split('?')[0]
         .split('-')[0];
-      if ((path.startsWith('http')) || (path.startsWith('//'))) {
+      if ((path.startsWith('http')) ||
+        (path.startsWith('//')) ||
+        (path.startsWith('#')) ||
+        (path === '/')) {
         title = '';
       }
       return {
@@ -45,7 +43,7 @@ const searhLinks = async (page: Page, itemLink: ILink) => {
       const checkByTitle = listOfLinks.findIndex((item) => item.title === link.title);
       const checkByPath = listOfLinks.findIndex((item) => item.path === link.path);
 
-      if (checkByTitle === -1 && checkByPath === -1) {
+      if (checkByTitle === -1 && checkByPath === -1 && itemLink.path !== link.path) {
         listOfLinks.push({
           ...link,
           idRootPage: itemLink.id,
