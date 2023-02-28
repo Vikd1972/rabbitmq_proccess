@@ -10,12 +10,12 @@ const joinedEnv = {
 };
 
 const config = {
-  postgresDb: {
+  db: {
     host: joinedEnv.POSTGRES_DB_HOST,
     port: +joinedEnv.POSTGRES_DB_PORT,
     user: joinedEnv.POSTGRES_DB_USER,
     password: joinedEnv.POSTGRES_DB_PASSWORD,
-    database: joinedEnv.POSTGRES_DB_NAME,
+    base: joinedEnv.POSTGRES_DB_NAME,
     logging: Boolean(joinedEnv.POSTGRES_DB_LOGGING),
   },
   port: +joinedEnv.SERVER_PORT,

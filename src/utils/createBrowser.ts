@@ -4,7 +4,7 @@ import { executablePath } from 'puppeteer';
 const createBrowser = async (options: string[]) => {
   const browser = await puppeteer.launch({
     ignoreDefaultArgs: ['--disable-extensions'],
-    headless: true,
+    headless: false,
     args: options,
     executablePath: executablePath(),
   });

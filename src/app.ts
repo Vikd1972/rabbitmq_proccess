@@ -3,7 +3,7 @@ import showMessage from './utils/showMessage';
 
 (async () => {
   try {
-    receiveMessage(['manage']);
+    receiveMessage();
   } catch (error) {
     showMessage('ERROR', 'server', error.message);
   }

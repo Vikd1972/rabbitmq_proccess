@@ -1,14 +1,9 @@
 import amqp from 'amqplib/callback_api';
 
-import worker from './worker';
+import jobHandler from '../workers/jobHandler';
 import showMessage from '../utils/showMessage';
 
-const receiveMessage = (args: string[]) => {
-  if (args.length === 0) {
-    showMessage('WARN', 'subscriber.receive', 'Input required');
-    process.exit(1);
-  }
-
+const receiveMessage = () => {
   amqp.connect('amqp://localhost', (error0, connection) => {
     if (error0) {
       throw error0;
@@ -29,22 +24,15 @@ const receiveMessage = (args: string[]) => {
         if (error2) {
           throw error2;
         }
-        showMessage('INFO', 'subscriber.receive', `Waiting for logs. To exit press CTRL+C, severity: '${args[0]}'`);
+        showMessage('INFO', 'subscriber.receive', 'Waiting for logs. To exit press CTRL+C');
 
-        args.forEach((severity) => {
-          channel.bindQueue(q.queue, exchange, severity);
-        });
+        channel.bindQueue(q.queue, exchange, 'manage');
 
         channel.consume(q.queue, (msg) => {
-          showMessage('INFO', 'subscriber.receive', `${msg.fields.routingKey}: ${msg.content}`);
+          const linkId = +(msg.content).toString();
 
-          if (msg.fields.routingKey === 'manage' && msg.content) {
-            const arrayOfQueue = (msg.content).toString().split(' ');
-            for (let i = 0; i < +arrayOfQueue[0]; i++) {
-              const queue = arrayOfQueue[1];
-              worker(queue, i);
-            }
-          }
+          showMessage('INFO', 'subscriber.receive', `Link id received: ${linkId}`);
+          jobHandler(linkId);
         }, {
           noAck: true,
         });
