@@ -56,7 +56,7 @@ const parsingLinks = async (itemLink: ILink, numberOfStreams: number) => {
 
   updateLink(newItemLink);
 
-  linksList.length = 10;
+  linksList.length = 7;
 
   await parallelParsing(linksList, numberOfStreams, browser);
 
