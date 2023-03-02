@@ -5,6 +5,9 @@ import type { ILink } from '../types';
 const searhLinks = async (page: Page, itemLink: ILink) => {
   const listOfLinks: Array<ILink> = [];
   const searchArea = await page.$('[id="app"]');
+  if (!searchArea) {
+    return [];
+  }
   const linksList = await searchArea.$$('a');
   for (const linksRow of linksList) {
     const link = await linksRow.evaluate((el) => {
@@ -37,13 +40,14 @@ const searhLinks = async (page: Page, itemLink: ILink) => {
         isChecked: false,
       };
     });
-    // console.log(link);
+
     if (link) {
       const endPath = link.path.slice(link.path.length - 10);
       if (!Number(endPath) && link.title) {
         const checkByTitle = listOfLinks.findIndex((item) => item.title === link.title);
         const checkByPath = listOfLinks.findIndex((item) => item.path === link.path);
-        const rootPath = itemLink.path.slice(0, 16);
+
+        const rootPath = `${itemLink.path.split('/')[0]}//${itemLink.path.split('/')[2]}`;
 
         if (checkByTitle === -1 && checkByPath === -1 && itemLink.path !== link.path) {
           listOfLinks.push({
