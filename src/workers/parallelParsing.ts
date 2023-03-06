@@ -22,21 +22,18 @@ const loadItem = (browser: Browser): Promise<void> => {
 };
 
 const changeNumberOfStreams = (numberOfStreams: number) => {
-  showMessage('WARN', 'parallelParsing.parallelParsing', `CHANGE NUMBER OF STREMS, NEW VALUE ${numberOfStreams}`);
+  showMessage('WARN', 'parallelParsing.changeNumberOfStreams', `CHANGE NUMBER OF STREMS, NEW VALUE ${numberOfStreams}`);
   if (numberOfStreams > myNumberOfStreams) {
     while (listOfInquiry.length < numberOfStreams) {
       listOfInquiry.push(loadItem(myBrowser));
     }
   } else {
     numberOfPagesToClose = myNumberOfStreams - numberOfStreams;
-    // while (listOfInquiry.length > numberOfStreams) {
-    //   listOfInquiry.pop();
-    // }
   }
 };
 
 const checkOfNecessityOfClosing = () => {
-  if (numberOfPagesToClose) {
+  if (!numberOfPagesToClose) {
     return false;
   }
   numberOfPagesToClose--;
@@ -56,7 +53,7 @@ const chooseUrlsForParsing = async (browser: Browser) => {
       const getMetrics = await page.metrics();
       let repetitions = 0;
       const result = await searhLinks(page, newLink);
-      showMessage('SUCCESS', 'parallelParsing.searchUrls', `url ${newLink.path} has been verified`);
+      showMessage('SUCCESS', 'parallelParsing.chooseUrlsForParsing', `url ${newLink.path} has been verified`);
 
       for (const oneLink of result) {
         const checkPathByOriginArray = initiallinksList.findIndex((item) => item.path === oneLink.path);
@@ -69,7 +66,7 @@ const chooseUrlsForParsing = async (browser: Browser) => {
         }
       }
 
-      showMessage('INFO', 'parallelParsing.searchUrls', `Result array generated, length: ${arrayOFResults.length}, ${repetitions} repetitions.`);
+      showMessage('INFO', 'parallelParsing.chooseUrlsForParsing', `Result array generated, length: ${arrayOFResults.length}, ${repetitions} repetitions.`);
       const newItemLink = {
         ...newLink,
         taskDuration: getMetrics.TaskDuration,
@@ -81,7 +78,7 @@ const chooseUrlsForParsing = async (browser: Browser) => {
     await page.close();
     return;
   } catch (error) {
-    showMessage('ERROR', 'parallelParsing.searchUrls', error.message);
+    showMessage('ERROR', 'parallelParsing.chooseUrlsForParsing', error.message);
   }
 };
 
@@ -106,18 +103,6 @@ const parallelParsing = async (
     while (completedPromises.length !== listOfInquiry.length) {
       completedPromises = await Promise.all(listOfInquiry);
     }
-
-    // const iterablePromise = async () => {
-    //   let resolvedIterable: void[] = [];
-    //   while (listOfInquiry.length !== resolvedIterable.length) {
-    //     resolvedIterable = await Promise.all(listOfInquiry);
-    //   }
-    //   return resolvedIterable;
-    // };
-
-    // iterablePromise().then((res) => {
-    //   console.log('res', res);
-    // });
 
     return arrayOFResults;
   } catch (error) {

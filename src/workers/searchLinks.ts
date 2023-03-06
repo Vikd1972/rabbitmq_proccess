@@ -64,7 +64,7 @@ const searhLinks = async (page: Page, itemLink: ILink) => {
     }
     const isClosed = parsing.checkOfNecessityOfClosing();
     if (isClosed) {
-      page.close();
+      await page.close();
     }
 
     return listOfLinks;

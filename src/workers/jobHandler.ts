@@ -1,54 +1,51 @@
-import type { Browser } from 'puppeteer-core';
-
-import type { ILink } from '../types';
-import getLink from '../api/getLinks';
+import environmentInitialization from './environmentInitialization';
 import parsing from './parallelParsing';
-import createBrowser from '../utils/createBrowser';
 import showMessage from '../utils/showMessage';
 
-let browser: Browser;
+let isPulled = false;
+let linkId: number;
+let numberOfStreams: number;
 
-const parsingLinks = async (
-  itemLink: ILink[],
-  numberOfStreams: number,
-  browser: Browser,
-) => {
+const jobHandler = async (data: string) => {
   try {
-    const result1Iteration = await parsing.parallelParsing(
-      itemLink, numberOfStreams, browser,
-    );
+    if ((linkId !== Number(data.split(' ')[0])) && isPulled) {
+      showMessage('WARN', 'workers.jobHandler', 'PROCESS BUSY');
+      return;
+    }
 
-    result1Iteration.length = 15;
+    if ((linkId === Number(data.split(' ')[0])) &&
+      (numberOfStreams === Number(data.split(' ')[1])) &&
+      isPulled) {
+      showMessage('WARN', 'workers.jobHandler', 'DATA HAS NOT CHANGED');
+      return;
+    }
 
-    const result2Iteration = await parsing.parallelParsing(
-      result1Iteration, numberOfStreams, browser,
-    );
-    return result2Iteration;
+    // eslint-disable-next-line no-restricted-globals
+    if (isNaN(Number(data.split(' ')[1])) && isPulled) {
+      showMessage('WARN', 'workers.jobHandler', 'NUMBER OF STREAMS IS NaN');
+      return;
+    }
+
+    if ((numberOfStreams !== Number(data.split(' ')[1])) && isPulled) {
+      numberOfStreams = Number(data.split(' ')[1]);
+      showMessage('WARN', 'workers.jobHandler', 'CHANGE NUMBER OF STREAMS');
+      parsing.changeNumberOfStreams(numberOfStreams);
+      return;
+    }
+
+    isPulled = true;
+    linkId = Number(data.split(' ')[0]);
+    numberOfStreams = Number(data.split(' ')[1]);
+
+    const { result, browser } = await environmentInitialization(linkId, numberOfStreams);
+
+    if (result) {
+      await browser.close();
+      showMessage('WARN', 'workers.jobHandler', `PROCESS FREE, FIND ${result.length} LINKS`);
+      isPulled = false;
+    }
   } catch (error) {
-    showMessage('ERROR', 'jobHandler.parsingLinks', error.message);
-  }
-};
-
-const jobHandler = async (
-  linkId: number,
-  numberOfStreams: number,
-) => {
-  try {
-    browser = await createBrowser(
-      [
-        '--use-gl=egl',
-        '--shm-size=1gb',
-        '--enable-blink-features=HTMLImports',
-      ],
-    );
-    const itemLink = await getLink(linkId);
-
-    const result = await parsingLinks(
-      [itemLink], numberOfStreams, browser,
-    );
-    return { result, browser };
-  } catch (error) {
-    showMessage('ERROR', 'jobHandler.jobHandler', error.message);
+    showMessage('ERROR', 'workers.jobHandler', error.message);
   }
 };
 

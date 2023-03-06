@@ -1,4 +1,4 @@
-import receiveMessage from './subscriber/receive';
+import receiveMessage from './subscriber/receiveMessage';
 import showMessage from './utils/showMessage';
 
 (async () => {
