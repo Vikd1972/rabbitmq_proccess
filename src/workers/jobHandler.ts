@@ -14,21 +14,23 @@ const parsingLinks = async (
   browser: Browser,
   isChangeNumberOfStreams: boolean,
 ) => {
-  let result: ILink[];
+  let result1Iteration: ILink[] = [];
   try {
-    const arrayOFResults = await parallelParsing(
-      itemLink, numberOfStreams, browser, isChangeNumberOfStreams,
-    );
+    if (!isChangeNumberOfStreams) {
+      result1Iteration = await parallelParsing(
+        itemLink, numberOfStreams, browser, isChangeNumberOfStreams,
+      );
 
-    arrayOFResults.length = 3;
+      result1Iteration.length = 8;
+    }
 
-    result = await parallelParsing(
-      arrayOFResults, numberOfStreams, browser, isChangeNumberOfStreams,
+    const result2Iteration = await parallelParsing(
+      result1Iteration, numberOfStreams, browser, isChangeNumberOfStreams,
     );
+    return result2Iteration;
   } catch (error) {
     showMessage('ERROR', 'jobHandler.parsingLinks', error.message);
   }
-  return result;
 };
 
 const jobHandler = async (
@@ -46,12 +48,14 @@ const jobHandler = async (
         ],
       );
     }
-
     const itemLink = await getLink(linkId);
+    // console.log('jobHandler 53, itemLink', itemLink);
 
     const result = await parsingLinks(
       [itemLink], numberOfStreams, browser, isChangeNumberOfStreams,
     );
+    // console.log('jobHandler 58, result.length', result.length);
+    // console.log('jobHandler 59, result[0]', result[0]);
     return { result, browser };
   } catch (error) {
     showMessage('ERROR', 'jobHandler.jobHandler', error.message);

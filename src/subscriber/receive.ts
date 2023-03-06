@@ -9,6 +9,7 @@ let linkId: number;
 let numberOfStreams: number;
 
 const startParsing = async (data: string) => {
+  // console.log('receive 12, data', data);
   try {
     if ((linkId !== Number(data.split(' ')[0])) && isPulled) {
       showMessage('WARN', 'subscriber.receive.startParsing', 'PROCESS BUSY');
@@ -16,7 +17,8 @@ const startParsing = async (data: string) => {
     }
 
     if ((linkId === Number(data.split(' ')[0])) &&
-      (numberOfStreams === Number(data.split(' ')[1]))) {
+      (numberOfStreams === Number(data.split(' ')[1])) &&
+      isPulled) {
       showMessage('WARN', 'subscriber.receive.startParsing', 'DATA HAS NOT CHANGED');
       return;
     }
@@ -34,10 +36,11 @@ const startParsing = async (data: string) => {
 
     linkId = Number(data.split(' ')[0]);
     numberOfStreams = Number(data.split(' ')[1]);
-
+    // console.log('receive 39, data', linkId, numberOfStreams);
     isPulled = true;
     const { result, browser } = await jobHandler(linkId, numberOfStreams, isChangeNumberOfStreams);
     if (result) {
+      // console.log('receive 43, result', result);
       isPulled = false;
       isChangeNumberOfStreams = false;
       await browser.close();
