@@ -14,12 +14,36 @@ let initiallinksList: ILink[] = [];
 let workinglinksList: ILink[] = [];
 let myNumberOfStreams: number;
 const listOfInquiry: Promise<void>[] = [];
+let myBrowser: Browser;
+let numberOfPagesToClose = 0;
 
-const changeNumberOfStreams = () => {
-  //
+const loadItem = (browser: Browser): Promise<void> => {
+  return chooseUrlsForParsing(browser);
 };
 
-const searchUrls = async (browser: Browser) => {
+const changeNumberOfStreams = (numberOfStreams: number) => {
+  showMessage('WARN', 'parallelParsing.parallelParsing', `CHANGE NUMBER OF STREMS, NEW VALUE ${numberOfStreams}`);
+  if (numberOfStreams > myNumberOfStreams) {
+    while (listOfInquiry.length < numberOfStreams) {
+      listOfInquiry.push(loadItem(myBrowser));
+    }
+  } else {
+    numberOfPagesToClose = myNumberOfStreams - numberOfStreams;
+    // while (listOfInquiry.length > numberOfStreams) {
+    //   listOfInquiry.pop();
+    // }
+  }
+};
+
+const checkOfNecessityOfClosing = () => {
+  if (numberOfPagesToClose) {
+    return false;
+  }
+  numberOfPagesToClose--;
+  return true;
+};
+
+const chooseUrlsForParsing = async (browser: Browser) => {
   try {
     const page = await createPage(browser);
     while (workinglinksList.length) {
@@ -55,6 +79,7 @@ const searchUrls = async (browser: Browser) => {
       addOrUpdateLink(newItemLink);
     }
     await page.close();
+    return;
   } catch (error) {
     showMessage('ERROR', 'parallelParsing.searchUrls', error.message);
   }
@@ -64,31 +89,16 @@ const parallelParsing = async (
   linksList: ILink[],
   numberOfStreams: number,
   browser: Browser,
-  isChangeNumberOfStreams: boolean,
 ) => {
   try {
-    const loadItem = (): Promise<void> => {
-      return searchUrls(browser);
-    };
-    if (!isChangeNumberOfStreams) {
-      initiallinksList = [...linksList];
-      workinglinksList = [...linksList];
-      listOfInquiry.length = 0;
-      myNumberOfStreams = isNaN(numberOfStreams) ? 2 : numberOfStreams;
-      while (listOfInquiry.length < myNumberOfStreams) {
-        listOfInquiry.push(loadItem());
-      }
-    } else {
-      showMessage('WARN', 'parallelParsing.parallelParsing', `CHANGE NUMBER OF STREMS, NEW VALUE ${numberOfStreams}`);
-      if (numberOfStreams > myNumberOfStreams) {
-        while (listOfInquiry.length < numberOfStreams) {
-          listOfInquiry.push(loadItem());
-        }
-      } else {
-        while (listOfInquiry.length > numberOfStreams) {
-          listOfInquiry.pop();
-        }
-      }
+    myBrowser = browser;
+    initiallinksList = [...linksList];
+    workinglinksList = [...linksList];
+    listOfInquiry.length = 0;
+    myNumberOfStreams = isNaN(numberOfStreams) ? 2 : numberOfStreams;
+
+    while (listOfInquiry.length < myNumberOfStreams) {
+      listOfInquiry.push(loadItem(myBrowser));
     }
 
     let completedPromises = [];
@@ -96,6 +106,19 @@ const parallelParsing = async (
     while (completedPromises.length !== listOfInquiry.length) {
       completedPromises = await Promise.all(listOfInquiry);
     }
+
+    // const iterablePromise = async () => {
+    //   let resolvedIterable: void[] = [];
+    //   while (listOfInquiry.length !== resolvedIterable.length) {
+    //     resolvedIterable = await Promise.all(listOfInquiry);
+    //   }
+    //   return resolvedIterable;
+    // };
+
+    // iterablePromise().then((res) => {
+    //   console.log('res', res);
+    // });
+
     return arrayOFResults;
   } catch (error) {
     showMessage('ERROR', 'parallelParsing.parallelParsing', error.message);
@@ -103,5 +126,5 @@ const parallelParsing = async (
 };
 
 export default {
-  parallelParsing, changeNumberOfStreams,
+  parallelParsing, changeNumberOfStreams, checkOfNecessityOfClosing,
 };

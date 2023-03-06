@@ -1,6 +1,7 @@
 /* eslint-disable no-await-in-loop */
 import type { Page } from 'puppeteer-core';
 import showMessage from '../utils/showMessage';
+import parsing from './parallelParsing';
 import type { ILink } from '../types';
 
 const searhLinks = async (page: Page, itemLink: ILink) => {
@@ -60,6 +61,10 @@ const searhLinks = async (page: Page, itemLink: ILink) => {
           }
         }
       }
+    }
+    const isClosed = parsing.checkOfNecessityOfClosing();
+    if (isClosed) {
+      page.close();
     }
 
     return listOfLinks;

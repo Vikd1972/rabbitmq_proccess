@@ -1,15 +1,14 @@
 import amqp from 'amqplib/callback_api';
 
 import jobHandler from '../workers/jobHandler';
+import parsing from '../workers/parallelParsing';
 import showMessage from '../utils/showMessage';
 
 let isPulled = false;
-let isChangeNumberOfStreams = false;
 let linkId: number;
 let numberOfStreams: number;
 
 const startParsing = async (data: string) => {
-  // console.log('receive 12, data', data);
   try {
     if ((linkId !== Number(data.split(' ')[0])) && isPulled) {
       showMessage('WARN', 'subscriber.receive.startParsing', 'PROCESS BUSY');
@@ -30,19 +29,18 @@ const startParsing = async (data: string) => {
     }
 
     if ((numberOfStreams !== Number(data.split(' ')[1])) && isPulled) {
+      numberOfStreams = Number(data.split(' ')[1]);
       showMessage('WARN', 'subscriber.receive.startParsing', 'CHANGE NUMBER OF STREAMS');
-      isChangeNumberOfStreams = true;
+      parsing.changeNumberOfStreams(numberOfStreams);
+      return;
     }
 
     linkId = Number(data.split(' ')[0]);
     numberOfStreams = Number(data.split(' ')[1]);
-    // console.log('receive 39, data', linkId, numberOfStreams);
     isPulled = true;
-    const { result, browser } = await jobHandler(linkId, numberOfStreams, isChangeNumberOfStreams);
+    const { result, browser } = await jobHandler(linkId, numberOfStreams);
     if (result) {
-      // console.log('receive 43, result', result);
       isPulled = false;
-      isChangeNumberOfStreams = false;
       await browser.close();
       showMessage('WARN', 'subscriber.receive', `PROCESS FREE, FIND ${result.length} LINKS`);
     }
