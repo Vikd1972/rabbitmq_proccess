@@ -45,15 +45,15 @@ const chooseUrlsForParsing = async (browser: Browser) => {
     const page = await createPage(browser);
     while (workinglinksList.length) {
       const link = workinglinksList.pop();
-      const newLink = await addOrUpdateLink(link);
-      await page.goto(newLink.path, {
+      // const newLink = await addOrUpdateLink(link);
+      await page.goto(link.path, {
         waitUntil: 'networkidle2',
         timeout: 0,
       });
       const getMetrics = await page.metrics();
       let repetitions = 0;
-      const result = await searhLinks(page, newLink);
-      showMessage('SUCCESS', 'parallelParsing.chooseUrlsForParsing', `url ${newLink.path} has been verified`);
+      const result = await searhLinks(page, link);
+      showMessage('SUCCESS', 'parallelParsing.chooseUrlsForParsing', `url ${link.path} has been verified`);
 
       for (const oneLink of result) {
         const checkPathByOriginArray = initiallinksList.findIndex((item) => item.path === oneLink.path);
@@ -68,12 +68,18 @@ const chooseUrlsForParsing = async (browser: Browser) => {
 
       showMessage('INFO', 'parallelParsing.chooseUrlsForParsing', `Result array generated, length: ${arrayOFResults.length}, ${repetitions} repetitions.`);
       const newItemLink = {
-        ...newLink,
+        ...link,
         taskDuration: getMetrics.TaskDuration,
         numberOfLinks: result.length - repetitions,
         isChecked: true,
       };
       addOrUpdateLink(newItemLink);
+
+      const isClosed = checkOfNecessityOfClosing();
+      if (isClosed) {
+        await page.close();
+        return;
+      }
     }
     await page.close();
     return;
@@ -83,17 +89,21 @@ const chooseUrlsForParsing = async (browser: Browser) => {
 };
 
 const parallelParsing = async (
-  linksList: ILink[],
+  linksList: ILink[] | string,
   numberOfStreams: number,
   browser: Browser,
 ) => {
   try {
     myBrowser = browser;
-    initiallinksList = [...linksList];
-    workinglinksList = [...linksList];
+    if (Array.isArray(linksList)) {
+      initiallinksList = [...linksList];
+      workinglinksList = [...linksList];
+    } else {
+      initiallinksList = [{ path: linksList }];
+      workinglinksList = [{ path: linksList }];
+    }
     listOfInquiry.length = 0;
-    myNumberOfStreams = isNaN(numberOfStreams) ? 2 : numberOfStreams;
-
+    myNumberOfStreams = !numberOfStreams ? 2 : numberOfStreams;
     while (listOfInquiry.length < myNumberOfStreams) {
       listOfInquiry.push(loadItem(myBrowser));
     }

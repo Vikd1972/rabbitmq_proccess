@@ -7,3 +7,9 @@ export interface ILink {
   idRootPage?: number;
   isChecked?: boolean;
 }
+
+export interface IDomain {
+  id: number;
+  domain: string;
+  isChecked: boolean;
+}

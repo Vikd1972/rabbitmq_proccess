@@ -1,3 +1,4 @@
+import type { DataType } from 'src/subscriber/subscriber';
 import environmentInitialization from './environmentInitialization';
 import parsing from './parallelParsing';
 import showMessage from '../utils/showMessage';
@@ -6,36 +7,37 @@ let isPulled = false;
 let linkId: number;
 let numberOfStreams: number;
 
-const jobHandler = async (data: string) => {
+const jobHandler = async (data: DataType) => {
+  // console.log(data);
   try {
-    if ((linkId !== Number(data.split(' ')[0])) && isPulled) {
+    if ((linkId !== data.linkId) && isPulled) {
       showMessage('WARN', 'workers.jobHandler', 'PROCESS BUSY');
       return;
     }
 
-    if ((linkId === Number(data.split(' ')[0])) &&
-      (numberOfStreams === Number(data.split(' ')[1])) &&
+    if ((linkId === data.linkId) &&
+      (numberOfStreams === data.numberOfStreams) &&
       isPulled) {
       showMessage('WARN', 'workers.jobHandler', 'DATA HAS NOT CHANGED');
       return;
     }
 
     // eslint-disable-next-line no-restricted-globals
-    if (isNaN(Number(data.split(' ')[1])) && isPulled) {
+    if (isNaN(data.numberOfStreams) && isPulled) {
       showMessage('WARN', 'workers.jobHandler', 'NUMBER OF STREAMS IS NaN');
       return;
     }
 
-    if ((numberOfStreams !== Number(data.split(' ')[1])) && isPulled) {
-      numberOfStreams = Number(data.split(' ')[1]);
+    if ((numberOfStreams !== data.numberOfStreams) && isPulled) {
+      numberOfStreams = data.numberOfStreams;
       showMessage('WARN', 'workers.jobHandler', 'CHANGE NUMBER OF STREAMS');
       parsing.changeNumberOfStreams(numberOfStreams);
       return;
     }
 
     isPulled = true;
-    linkId = Number(data.split(' ')[0]);
-    numberOfStreams = Number(data.split(' ')[1]);
+    linkId = data.linkId;
+    numberOfStreams = data.numberOfStreams;
 
     const { result, browser } = await environmentInitialization(linkId, numberOfStreams);
 

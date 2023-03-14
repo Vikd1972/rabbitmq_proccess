@@ -10,22 +10,10 @@ const joinedEnv = {
 };
 
 const config = {
-  db: {
-    host: joinedEnv.POSTGRES_DB_HOST,
-    port: +joinedEnv.POSTGRES_DB_PORT,
-    user: joinedEnv.POSTGRES_DB_USER,
-    password: joinedEnv.POSTGRES_DB_PASSWORD,
-    base: joinedEnv.POSTGRES_DB_NAME,
-    logging: Boolean(joinedEnv.POSTGRES_DB_LOGGING),
-  },
-  port: +joinedEnv.SERVER_PORT,
-  urlVodokanal: joinedEnv.URL_VODOKANAL,
-  urlAvito: joinedEnv.URL_AVITO,
-  urlAvitoNotes: joinedEnv.URL_AVITO_NOTES,
-  urlProxyServer: joinedEnv.URL_PROXY_SERVER,
-  urlProxyServer2: joinedEnv.URL_PROXY_SERVER2,
-  isCronJobsRun: joinedEnv.SERVER_IS_CRON_JOBS_ENABLED,
   numberOfStreams: +joinedEnv.NUMBER_OF_STREAMS,
+  rabbitExchange: joinedEnv.RABBIT_EXCHANGE,
+  rabbitHost: joinedEnv.RABBIT_HOST,
+  baseUrl: joinedEnv.BASE_URL,
 };
 
 export default config;

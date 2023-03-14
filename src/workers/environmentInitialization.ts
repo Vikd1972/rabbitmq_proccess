@@ -1,16 +1,16 @@
+/* eslint-disable no-console */
 import type { Browser } from 'puppeteer-core';
 
-import getLink from '../api/getLinks';
+import getLink from '../api/getLink';
 import startParsing from './startParsing';
 import createBrowser from '../utils/createBrowser';
 import showMessage from '../utils/showMessage';
-
-let browser: Browser;
 
 const environmentInitialization = async (
   linkId: number,
   numberOfStreams: number,
 ) => {
+  let browser: Browser;
   try {
     browser = await createBrowser(
       [
@@ -19,11 +19,11 @@ const environmentInitialization = async (
         '--enable-blink-features=HTMLImports',
       ],
     );
-    const itemLink = await getLink(linkId);
-
+    const domain = await getLink(linkId);
     const result = await startParsing(
-      [itemLink], numberOfStreams, browser,
+      domain, numberOfStreams, browser,
     );
+    console.log('28', result);
     return { result, browser };
   } catch (error) {
     showMessage('ERROR', 'workers.environmentInitialization', error.message);
