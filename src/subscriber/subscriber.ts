@@ -34,14 +34,13 @@ const Subscriber = class {
   };
 
   startReceiver = async (itemQueue: string) => {
-    (await this.channel).assertQueue('', {
+    const assertQueue = (await this.channel).assertQueue('', {
       exclusive: true,
     });
 
     showMessage('INFO', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" waiting for logs. To exit press CTRL+C`);
-
-    (await this.channel).bindQueue('', config.rabbitExchange, itemQueue);
-    (await this.channel).consume('', (msg) => {
+    (await this.channel).bindQueue((await assertQueue).queue, config.rabbitExchange, itemQueue);
+    (await this.channel).consume((await assertQueue).queue, (msg) => {
       const data = (msg.content).toString();
       const currentData = JSON.parse(data) as DataType;
       showMessage('INFO', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" received.`);
