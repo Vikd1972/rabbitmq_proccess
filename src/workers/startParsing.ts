@@ -1,8 +1,8 @@
 import type { Browser } from 'puppeteer-core';
 
 import type { IDomain } from '../types';
-import parsing from './parallelParsing';
-import showMessage from '../utils/showMessage';
+import parallelParsing from './parallelParsing';
+import logger from '../utils/logger';
 
 const startParsing = async (
   domain: IDomain,
@@ -11,14 +11,14 @@ const startParsing = async (
 ) => {
   try {
     // the number of iterations for testing is fixed
-    const result = await parsing.parallelParsing(domain.domain, numberOfStreams, browser);
-    // result.length = 15;
-    // const result2Iteration = await parsing.parallelParsing(
-    //   result, numberOfStreams, browser,
-    // );
-    return result;
+    const result = await parallelParsing.parsing(domain, numberOfStreams, browser);
+    result.length = 15;
+    const result2Iteration = await parallelParsing.parsing(
+      result, numberOfStreams, browser,
+    );
+    return result2Iteration;
   } catch (error) {
-    showMessage('ERROR', 'workers.startParsing', error.message);
+    logger('ERROR', 'workers.startParsing', error.message);
   }
 };
 

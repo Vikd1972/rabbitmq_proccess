@@ -1,125 +1,165 @@
 /* eslint-disable max-len */
-/* eslint-disable no-restricted-globals */
 /* eslint-disable no-await-in-loop */
-import type { Browser } from 'puppeteer-core';
+import type { Browser, Page } from 'puppeteer-core';
+import type { Metrics } from 'puppeteer';
 
-import type { ILink } from '../types';
-import addOrUpdateLink from '../api/addOrUpdateLink';
-import createPage from '../utils/createPage';
+import type { ILink, IDomain } from '../types';
+import updateDomain from '../api/updateDomain';
+import setLink from '../api/setLink';
+import createPuppeteerEnv from '../utils/createPuppeteerEnv';
 import searhLinks from './searchLinks';
-import showMessage from '../utils/showMessage';
+import logger from '../utils/logger';
 
-const arrayOFResults: ILink[] = [];
-let initiallinksList: ILink[] = [];
-let workinglinksList: ILink[] = [];
-let myNumberOfStreams: number;
-const listOfInquiry: Promise<void>[] = [];
-let myBrowser: Browser;
-let numberOfPagesToClose = 0;
+const ParallelParsing = class {
+  myBrowser: Browser;
 
-const loadItem = (browser: Browser): Promise<void> => {
-  return chooseUrlsForParsing(browser);
-};
+  listOfInquiry: Promise<void>[] = [];
 
-const changeNumberOfStreams = (numberOfStreams: number) => {
-  showMessage('WARN', 'parallelParsing.changeNumberOfStreams', `CHANGE NUMBER OF STREMS, NEW VALUE ${numberOfStreams}`);
-  if (numberOfStreams > myNumberOfStreams) {
-    while (listOfInquiry.length < numberOfStreams) {
-      listOfInquiry.push(loadItem(myBrowser));
+  arrayOFResults: ILink[] = [];
+
+  initiallinksList: ILink[] = [];
+
+  workinglinksList: ILink[] = [];
+
+  myNumberOfStreams: number;
+
+  isDomain = false;
+
+  idDomain: number;
+
+  // get promise **********************
+
+  loadItem = (index: number): Promise<void> => {
+    return this.chooseUrlsForParsing(index);
+  };
+
+  // data initialization **************
+
+  dataInitialization = (linksList: ILink[] | IDomain) => {
+    if (Array.isArray(linksList)) {
+      this.initiallinksList = [...linksList];
+      this.workinglinksList = [...linksList];
+      this.isDomain = false;
+    } else {
+      this.initiallinksList = [{ id: linksList.id, path: linksList.domain }];
+      this.workinglinksList = [{ id: linksList.id, path: linksList.domain }];
+      this.isDomain = true;
     }
-  } else {
-    numberOfPagesToClose = myNumberOfStreams - numberOfStreams;
-  }
-};
+  };
 
-const checkOfNecessityOfClosing = () => {
-  if (!numberOfPagesToClose) {
-    return false;
-  }
-  numberOfPagesToClose--;
-  return true;
-};
+  // filling in the array of promis ***
 
-const chooseUrlsForParsing = async (browser: Browser) => {
-  try {
-    const page = await createPage(browser);
-    while (workinglinksList.length) {
-      const link = workinglinksList.pop();
-      // const newLink = await addOrUpdateLink(link);
-      await page.goto(link.path, {
-        waitUntil: 'networkidle2',
-        timeout: 0,
-      });
-      const getMetrics = await page.metrics();
-      let repetitions = 0;
-      const result = await searhLinks(page, link);
-      showMessage('SUCCESS', 'parallelParsing.chooseUrlsForParsing', `url ${link.path} has been verified`);
+  fillingArray = (numberOfStreams: number) => {
+    this.myNumberOfStreams = !numberOfStreams ? 2 : numberOfStreams;
 
-      for (const oneLink of result) {
-        const checkPathByOriginArray = initiallinksList.findIndex((item) => item.path === oneLink.path);
-        const checkPathByResultArray = arrayOFResults.findIndex((item) => item.path === oneLink.path);
+    for (let i = 0; i < this.myNumberOfStreams; i++) {
+      this.listOfInquiry.push(this.loadItem(i));
+    }
+  };
 
-        if (checkPathByOriginArray === -1 && checkPathByResultArray === -1) {
-          arrayOFResults.push(oneLink);
-        } else {
-          repetitions++;
+  // parsing **************************
+
+  parsing = async (
+    linksList: ILink[] | IDomain,
+    numberOfStreams: number,
+    browser: Browser,
+  ) => {
+    try {
+      this.myBrowser = browser;
+      this.dataInitialization(linksList);
+
+      this.fillingArray(numberOfStreams);
+
+      let completedPromises = [];
+
+      while (completedPromises.length !== this.listOfInquiry.length) {
+        completedPromises = await Promise.all(this.listOfInquiry);
+      }
+
+      return this.arrayOFResults;
+    } catch (error) {
+      logger('ERROR', 'parallelParsing.parsing', error.message);
+    }
+  };
+
+  // run search ***********************
+
+  runSearch = async (link: ILink, page: Page) => {
+    await page.goto(link.path, {
+      waitUntil: 'networkidle2',
+      timeout: 0,
+    });
+    const getMetrics = await page.metrics();
+    let repetitions = 0;
+    const result = await searhLinks(page, link);
+    logger('SUCCESS', 'parallelParsing.runSearch', `url ${link.path} has been verified`);
+
+    for (const oneLink of result) {
+      const checkPathByOriginArray = this.initiallinksList.findIndex((item) => item.path === oneLink.path);
+      const checkPathByResultArray = this.arrayOFResults.findIndex((item) => item.path === oneLink.path);
+
+      if (checkPathByOriginArray === -1 && checkPathByResultArray === -1) {
+        this.arrayOFResults.push(oneLink);
+      } else {
+        repetitions++;
+      }
+    }
+    return { getMetrics, repetitions, result };
+  };
+
+  // save link ************************
+
+  saveLink = async (link: ILink, getMetrics: Metrics, repetitions: number, result: ILink[]) => {
+    logger('INFO', 'parallelParsing.saveLink', `Result array generated, length: ${this.arrayOFResults.length}, ${repetitions} repetitions.`);
+    const newItemLink = {
+      ...link,
+      idDomain: this.idDomain,
+      taskDuration: getMetrics.TaskDuration,
+      numberOfLinks: result.length - repetitions,
+      isChecked: true,
+    };
+
+    if (!this.isDomain) {
+      setLink(newItemLink);
+    } else {
+      await updateDomain(newItemLink.id);
+      this.idDomain = newItemLink.id;
+    }
+  };
+
+  // choose url for parsing ***********
+
+  chooseUrlsForParsing = async (index: number) => {
+    try {
+      const page = await createPuppeteerEnv.createPage();
+      while (this.workinglinksList.length) {
+        const link = this.workinglinksList.pop();
+
+        const { getMetrics, repetitions, result } = await this.runSearch(link, page);
+
+        await this.saveLink(link, getMetrics, repetitions, result);
+
+        if (index >= this.myNumberOfStreams) {
+          break;
         }
       }
+      await page.close();
+      return;
+    } catch (error) {
+      logger('ERROR', 'parallelParsing.chooseUrlsForParsing', error.message);
+    }
+  };
 
-      showMessage('INFO', 'parallelParsing.chooseUrlsForParsing', `Result array generated, length: ${arrayOFResults.length}, ${repetitions} repetitions.`);
-      const newItemLink = {
-        ...link,
-        taskDuration: getMetrics.TaskDuration,
-        numberOfLinks: result.length - repetitions,
-        isChecked: true,
-      };
-      addOrUpdateLink(newItemLink);
+  // change number of streams +++++++++
 
-      const isClosed = checkOfNecessityOfClosing();
-      if (isClosed) {
-        await page.close();
-        return;
+  changeNumberOfStreams = (numberOfStreams: number) => {
+    if (numberOfStreams > this.myNumberOfStreams) {
+      for (let i = this.myNumberOfStreams; i < numberOfStreams; i++) {
+        this.listOfInquiry.push(this.loadItem(i));
       }
     }
-    await page.close();
-    return;
-  } catch (error) {
-    showMessage('ERROR', 'parallelParsing.chooseUrlsForParsing', error.message);
-  }
+    this.myNumberOfStreams = numberOfStreams;
+  };
 };
 
-const parallelParsing = async (
-  linksList: ILink[] | string,
-  numberOfStreams: number,
-  browser: Browser,
-) => {
-  try {
-    myBrowser = browser;
-    if (Array.isArray(linksList)) {
-      initiallinksList = [...linksList];
-      workinglinksList = [...linksList];
-    } else {
-      initiallinksList = [{ path: linksList }];
-      workinglinksList = [{ path: linksList }];
-    }
-    listOfInquiry.length = 0;
-    myNumberOfStreams = !numberOfStreams ? 2 : numberOfStreams;
-    while (listOfInquiry.length < myNumberOfStreams) {
-      listOfInquiry.push(loadItem(myBrowser));
-    }
-
-    let completedPromises = [];
-
-    while (completedPromises.length !== listOfInquiry.length) {
-      completedPromises = await Promise.all(listOfInquiry);
-    }
-
-    return arrayOFResults;
-  } catch (error) {
-    showMessage('ERROR', 'parallelParsing.parallelParsing', error.message);
-  }
-};
-
-export default {
-  parallelParsing, changeNumberOfStreams, checkOfNecessityOfClosing,
-};
+export default new ParallelParsing();

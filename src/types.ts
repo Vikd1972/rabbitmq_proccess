@@ -4,7 +4,7 @@ export interface ILink {
   path: string;
   taskDuration?: number;
   numberOfLinks?: number;
-  idRootPage?: number;
+  idDomain?: number;
   isChecked?: boolean;
 }
 

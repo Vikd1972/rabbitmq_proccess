@@ -11,11 +11,11 @@ const arrayOfColors = {
   // white: '\x1b[37m',
 };
 
-const showMessage = (type: keyof typeof arrayOfColors, proccess: string, message: string) => {
+const logger = (type: keyof typeof arrayOfColors, proccess: string, message: string) => {
   const colorMessage = Object.entries(arrayOfColors).filter((item) => item[0] === type)[0][1];
 
   console.log(`\u2554= type: ${type}, proccess: ${proccess}`);
   console.log('\u2551', colorMessage, message, '\x1b[0m');
   console.log('\u255A============================');
 };
-export default showMessage;
+export default logger;

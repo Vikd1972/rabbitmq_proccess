@@ -1,11 +1,11 @@
 import subscriber from './subscriber/subscriber';
-import showMessage from './utils/showMessage';
+import logger from './utils/logger';
 
 (async () => {
   try {
     await subscriber.init();
   } catch (error) {
-    showMessage('ERROR', 'server', error.message);
+    logger('ERROR', 'server', error.message);
     process.exit(1);
   }
 })();

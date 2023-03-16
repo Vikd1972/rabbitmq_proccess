@@ -6,7 +6,7 @@ type ResponseType = {
 };
 
 const getLink = async (linkId: number) => {
-  const response = await instance.get<ResponseType>(`/${linkId}`);
+  const response = await instance.get<ResponseType>(`/domain/${linkId}`);
 
   return response.data.domain;
 };

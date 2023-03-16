@@ -2,9 +2,9 @@
 /* eslint-disable no-console */
 import amqp from 'amqplib';
 
-import jobHandler from '../workers/jobHandler';
-import showMessage from '../utils/showMessage';
 import config from '../config';
+import jobHandler from '../workers/jobHandler';
+import logger from '../utils/logger';
 
 export type DataType = {
   severity: string;
@@ -25,7 +25,7 @@ const Subscriber = class {
     });
     const pointExchange = Object.values(await result);
 
-    showMessage('SUCCESS', 'subscriber.init', `Point of exchange "${pointExchange}" created`);
+    logger('SUCCESS', 'subscriber.init', `Point of exchange "${pointExchange}" created`);
 
     for (const itemQueue of this.queues) {
       this.startReceiver(itemQueue);
@@ -38,21 +38,23 @@ const Subscriber = class {
       exclusive: true,
     });
 
-    showMessage('INFO', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" waiting for logs. To exit press CTRL+C`);
+    logger('INFO', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" waiting for logs. To exit press CTRL+C`);
     (await this.channel).bindQueue((await assertQueue).queue, config.rabbitExchange, itemQueue);
+
     (await this.channel).consume((await assertQueue).queue, (msg) => {
       const data = (msg.content).toString();
       const currentData = JSON.parse(data) as DataType;
-      showMessage('INFO', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" received.`);
+      logger('INFO', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" received.`);
+
       switch (currentData.severity) {
         case 'domain':
-          jobHandler(currentData);
+          jobHandler.startJob(currentData);
           break;
         case 'config':
-          // console.log('config');
+          jobHandler.validationData(currentData);
           break;
         default:
-          showMessage('WARN', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" not exists`);
+          logger('WARN', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" not exists`);
       }
     }, {
       noAck: true,
