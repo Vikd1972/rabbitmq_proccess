@@ -1,6 +1,5 @@
-import puppeteer from 'puppeteer-core';
-import type { Browser } from 'puppeteer-core';
-import { executablePath } from 'puppeteer';
+import puppeteer, { executablePath } from 'puppeteer'; // "^19.6.1"
+import type { Browser } from 'puppeteer';
 
 const CreatePuppeteerEnv = class {
   browser: Browser;
@@ -15,8 +14,9 @@ const CreatePuppeteerEnv = class {
     return this.browser;
   };
 
-  createPage = async () => {
-    const page = await this.browser.newPage();
+  // eslint-disable-next-line class-methods-use-this
+  createPage = async (browser: Browser) => {
+    const page = await browser.newPage();
     await page.setViewport({
       width: 1200,
       height: 800,

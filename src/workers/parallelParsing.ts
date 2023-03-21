@@ -1,7 +1,6 @@
 /* eslint-disable max-len */
 /* eslint-disable no-await-in-loop */
-import type { Browser, Page } from 'puppeteer-core';
-import type { Metrics } from 'puppeteer';
+import type { Browser, Page, Metrics } from 'puppeteer';
 
 import type { ILink, IDomain } from '../types';
 import updateDomain from '../api/updateDomain';
@@ -11,50 +10,67 @@ import searhLinks from './searchLinks';
 import logger from '../utils/logger';
 
 const ParallelParsing = class {
-  myBrowser: Browser;
+  myBrowser: {
+    [index: number]: Browser;
+  } = {};
 
-  listOfInquiry: Promise<void>[] = [];
+  listOfInquiry: {
+    [index: number]: Promise<void>[];
+  } = {};
 
-  arrayOFResults: ILink[] = [];
+  arrayOFResults: {
+    [index: number]: ILink[];
+  } = {};
 
-  initiallinksList: ILink[] = [];
+  initiallinksList: {
+    [index: string]: ILink[];
+  } = {};
 
-  workinglinksList: ILink[] = [];
+  workinglinksList: {
+    [index: string]: ILink[];
+  } = {};
 
-  myNumberOfStreams: number;
+  myNumberOfStreams: {
+    [index: number]: number;
+  } = {};
 
-  isDomain = false;
+  isDomain: {
+    [index: number]: boolean;
+  } = {};
 
-  idDomain: number;
+  idDomain: {
+    [index: number]: number;
+  } = {};
 
   // get promise **********************
 
-  loadItem = (index: number): Promise<void> => {
-    return this.chooseUrlsForParsing(index);
+  loadItem = (index: number, idProcess: number): Promise<void> => {
+    return this.chooseUrlsForParsing(index, idProcess);
   };
 
   // data initialization **************
 
-  dataInitialization = (linksList: ILink[] | IDomain) => {
+  dataInitialization = (linksList: ILink[] | IDomain, idProcess: number) => {
     if (Array.isArray(linksList)) {
-      this.initiallinksList = [...linksList];
-      this.workinglinksList = [...linksList];
-      this.isDomain = false;
+      this.initiallinksList[idProcess] = [...linksList];
+      this.workinglinksList[idProcess] = [...linksList];
+      this.isDomain[idProcess] = false;
     } else {
-      this.initiallinksList = [{ id: linksList.id, path: linksList.domain }];
-      this.workinglinksList = [{ id: linksList.id, path: linksList.domain }];
-      this.isDomain = true;
+      this.initiallinksList[idProcess] = [{ id: linksList.id, path: linksList.domain }];
+      this.workinglinksList[idProcess] = [{ id: linksList.id, path: linksList.domain }];
+      this.isDomain[idProcess] = true;
     }
   };
 
   // filling in the array of promis ***
 
-  fillingArray = (numberOfStreams: number) => {
-    this.myNumberOfStreams = !numberOfStreams ? 2 : numberOfStreams;
-
-    for (let i = 0; i < this.myNumberOfStreams; i++) {
-      this.listOfInquiry.push(this.loadItem(i));
+  fillingArray = (numberOfStreams: number, idProcess: number) => {
+    this.myNumberOfStreams[idProcess] = !numberOfStreams ? 2 : numberOfStreams;
+    const arrayOfProcess = [];
+    for (let i = 0; i < this.myNumberOfStreams[idProcess]; i++) {
+      arrayOfProcess[i] = this.loadItem(i, idProcess);
     }
+    this.listOfInquiry[idProcess] = arrayOfProcess;
   };
 
   // parsing **************************
@@ -65,18 +81,17 @@ const ParallelParsing = class {
     browser: Browser,
   ) => {
     try {
-      this.myBrowser = browser;
-      this.dataInitialization(linksList);
-
-      this.fillingArray(numberOfStreams);
+      const idProcess = Array.isArray(linksList) ? linksList[0].idDomain : linksList.id;
+      this.myBrowser[idProcess] = browser;
+      this.dataInitialization(linksList, idProcess);
+      this.fillingArray(numberOfStreams, idProcess);
 
       let completedPromises = [];
 
-      while (completedPromises.length !== this.listOfInquiry.length) {
-        completedPromises = await Promise.all(this.listOfInquiry);
+      while (completedPromises.length !== this.listOfInquiry[idProcess].length) {
+        completedPromises = await Promise.all(this.listOfInquiry[idProcess]);
       }
-
-      return this.arrayOFResults;
+      return this.arrayOFResults[idProcess];
     } catch (error) {
       logger('ERROR', 'parallelParsing.parsing', error.message);
     }
@@ -84,7 +99,7 @@ const ParallelParsing = class {
 
   // run search ***********************
 
-  runSearch = async (link: ILink, page: Page) => {
+  runSearch = async (link: ILink, page: Page, idProcess: number) => {
     await page.goto(link.path, {
       waitUntil: 'networkidle2',
       timeout: 0,
@@ -94,52 +109,53 @@ const ParallelParsing = class {
     const result = await searhLinks(page, link);
     logger('SUCCESS', 'parallelParsing.runSearch', `url ${link.path} has been verified`);
 
+    this.arrayOFResults[idProcess] = [];
+    const resultsArray = [];
     for (const oneLink of result) {
-      const checkPathByOriginArray = this.initiallinksList.findIndex((item) => item.path === oneLink.path);
-      const checkPathByResultArray = this.arrayOFResults.findIndex((item) => item.path === oneLink.path);
-
+      const checkPathByOriginArray = this.initiallinksList[idProcess].findIndex((item) => item.path === oneLink.path);
+      const checkPathByResultArray = this.arrayOFResults[idProcess].findIndex((item) => item.path === oneLink.path);
       if (checkPathByOriginArray === -1 && checkPathByResultArray === -1) {
-        this.arrayOFResults.push(oneLink);
+        resultsArray.push(oneLink);
       } else {
         repetitions++;
       }
     }
+    this.arrayOFResults[idProcess] = resultsArray;
     return { getMetrics, repetitions, result };
   };
 
   // save link ************************
 
-  saveLink = async (link: ILink, getMetrics: Metrics, repetitions: number, result: ILink[]) => {
-    logger('INFO', 'parallelParsing.saveLink', `Result array generated, length: ${this.arrayOFResults.length}, ${repetitions} repetitions.`);
+  saveLink = async (link: ILink, getMetrics: Metrics, repetitions: number, result: ILink[], idProcess: number) => {
+    logger('INFO', 'parallelParsing.saveLink', `Result array generated, length: ${this.arrayOFResults[idProcess].length}, ${repetitions} repetitions.`);
     const newItemLink = {
       ...link,
-      idDomain: this.idDomain,
+      idDomain: this.idDomain[idProcess],
       taskDuration: getMetrics.TaskDuration,
       numberOfLinks: result.length - repetitions,
       isChecked: true,
     };
 
-    if (!this.isDomain) {
-      setLink(newItemLink);
+    if (!this.isDomain[idProcess]) {
+      await setLink(newItemLink);
     } else {
       await updateDomain(newItemLink.id);
-      this.idDomain = newItemLink.id;
+      this.idDomain[idProcess] = newItemLink.id;
     }
   };
 
   // choose url for parsing ***********
 
-  chooseUrlsForParsing = async (index: number) => {
+  chooseUrlsForParsing = async (index: number, idProcess: number) => {
     try {
-      const page = await createPuppeteerEnv.createPage();
-      while (this.workinglinksList.length) {
-        const link = this.workinglinksList.pop();
+      const page = await createPuppeteerEnv.createPage(this.myBrowser[idProcess]);
+      while (this.workinglinksList[idProcess].length) {
+        const link = this.workinglinksList[idProcess].pop();
+        const { getMetrics, repetitions, result } = await this.runSearch(link, page, idProcess);
 
-        const { getMetrics, repetitions, result } = await this.runSearch(link, page);
+        await this.saveLink(link, getMetrics, repetitions, result, idProcess);
 
-        await this.saveLink(link, getMetrics, repetitions, result);
-
-        if (index >= this.myNumberOfStreams) {
+        if (index >= this.myNumberOfStreams[idProcess]) {
           break;
         }
       }
@@ -152,13 +168,13 @@ const ParallelParsing = class {
 
   // change number of streams +++++++++
 
-  changeNumberOfStreams = (numberOfStreams: number) => {
-    if (numberOfStreams > this.myNumberOfStreams) {
-      for (let i = this.myNumberOfStreams; i < numberOfStreams; i++) {
-        this.listOfInquiry.push(this.loadItem(i));
+  changeNumberOfStreams = (numberOfStreams: number, idProcess: number) => {
+    if (numberOfStreams > this.myNumberOfStreams[idProcess]) {
+      for (let i = this.myNumberOfStreams[idProcess]; i < numberOfStreams; i++) {
+        this.listOfInquiry[idProcess].push(this.loadItem(i, idProcess));
       }
     }
-    this.myNumberOfStreams = numberOfStreams;
+    this.myNumberOfStreams[idProcess] = numberOfStreams;
   };
 };
 
