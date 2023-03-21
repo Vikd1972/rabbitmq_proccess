@@ -1,4 +1,4 @@
-import puppeteer, { executablePath } from 'puppeteer'; // "^19.6.1"
+import puppeteer, { executablePath } from 'puppeteer';
 import type { Browser } from 'puppeteer';
 
 const CreatePuppeteerEnv = class {
@@ -21,7 +21,7 @@ const CreatePuppeteerEnv = class {
       width: 1200,
       height: 800,
     });
-    page.setDefaultNavigationTimeout(0);
+    page.setDefaultNavigationTimeout(60000);
     return page;
   };
 };

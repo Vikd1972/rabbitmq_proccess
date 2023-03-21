@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/indent */
-/* eslint-disable no-console */
 import amqp from 'amqplib';
 
 import config from '../config';

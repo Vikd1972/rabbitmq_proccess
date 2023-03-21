@@ -169,10 +169,12 @@ const ParallelParsing = class {
   // change number of streams +++++++++
 
   changeNumberOfStreams = (numberOfStreams: number, idProcess: number) => {
+    const additionalArray = [];
     if (numberOfStreams > this.myNumberOfStreams[idProcess]) {
       for (let i = this.myNumberOfStreams[idProcess]; i < numberOfStreams; i++) {
-        this.listOfInquiry[idProcess].push(this.loadItem(i, idProcess));
+        additionalArray.push(this.loadItem(i, idProcess));
       }
+      this.listOfInquiry[idProcess].push(...additionalArray);
     }
     this.myNumberOfStreams[idProcess] = numberOfStreams;
   };

@@ -60,6 +60,7 @@ const searhLinks = async (page: Page, itemLink: ILink) => {
           const rootPath = `${itemLink.path.split('/')[0]}//${itemLink.path.split('/')[2]}`;
 
           if (checkByTitle === -1 && checkByPath === -1 && itemLink.path !== link.path) {
+            // eslint-disable-next-line max-len
             const currentPath = link.path.startsWith('http') ? `${link.path}` : `${rootPath}${link.path}`;
             result.push({
               ...link,

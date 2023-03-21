@@ -31,8 +31,6 @@ const JobHandler = class {
       }
       this.configData.push(data);
 
-      // const configDataItem = this.searchConfig(data);
-
       this.listOfBrowsers.push(this.loadBrowser(data));
 
       let completedPromises = [];
@@ -40,8 +38,6 @@ const JobHandler = class {
       while (completedPromises.length !== this.listOfBrowsers.length) {
         completedPromises = await Promise.all(this.listOfBrowsers);
       }
-
-      // const { result, browser } = await this.environmentInitialization(configDataItem);
     } catch (error) {
       logger('ERROR', 'workers.jobHandler.startJob', error.message);
     }
@@ -50,7 +46,7 @@ const JobHandler = class {
   // search config index **************
 
   searchConfig = (data: DataType) => {
-    return this.configData.find((item: DataType) => item.linkId === data.linkId);
+    return this.configData.find((item: DataType) => item.linkId === +data.linkId);
   };
 
   // validation data ******************
@@ -77,10 +73,12 @@ const JobHandler = class {
       if (data.severity === 'config' && configDataItem.numberOfStreams !== data.numberOfStreams) {
         configDataItem.numberOfStreams = data.numberOfStreams;
         logger('WARN', 'workers.jobHandler.validationData', `CHANGE NUMBER OF STREAMS, NEW NUMBER: ${data.numberOfStreams}`);
-        const idProcess = configDataItem.linkId;
+        const idProcess = data.linkId;
         parallelParsing.changeNumberOfStreams(data.numberOfStreams, idProcess);
         return true;
       }
+    } else {
+      logger('WARN', 'workers.jobHandler.validationData', `PROCESS WITH ID ${data.linkId} NOT STARTED`);
     }
   };
 
