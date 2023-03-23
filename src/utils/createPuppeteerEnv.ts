@@ -1,20 +1,24 @@
+/* eslint-disable class-methods-use-this */
 import puppeteer, { executablePath } from 'puppeteer';
 import type { Browser } from 'puppeteer';
 
 const CreatePuppeteerEnv = class {
   browser: Browser;
 
-  createBrowser = async (options: string[]) => {
+  createBrowser = async () => {
     this.browser = await puppeteer.launch({
       ignoreDefaultArgs: ['--disable-extensions'],
       headless: false,
-      args: options,
+      args: [
+        '--use-gl=egl',
+        '--shm-size=1gb',
+        '--enable-blink-features=HTMLImports',
+      ],
       executablePath: executablePath(),
     });
     return this.browser;
   };
 
-  // eslint-disable-next-line class-methods-use-this
   createPage = async (browser: Browser) => {
     const page = await browser.newPage();
     await page.setViewport({

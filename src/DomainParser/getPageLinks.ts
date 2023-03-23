@@ -1,47 +1,11 @@
 /* eslint-disable no-await-in-loop */
-import type { Page, ElementHandle } from 'puppeteer';
+import type { Page } from 'puppeteer';
 
 import type { ILink } from '../types';
 import logger from '../utils/logger';
+import clearingLink from './clearingLink';
 
-const getLink = async (linksRow: ElementHandle<HTMLAnchorElement>) => {
-  try {
-    const link = await linksRow.evaluate((el) => {
-      let title = el.textContent
-        .replace('\n', ' ')
-        .replace('- ', '') as string;
-
-      const pathString = (el.outerHTML as string);
-
-      if (!pathString.includes('href=')) {
-        return;
-      }
-
-      const path = pathString
-        .split(' ')
-        .find((item) => item.startsWith('href='))
-        .slice(6, pathString.length - 1)
-        .split('"')[0]
-        .split('?')[0]
-        .split('-')[0];
-      if ((path.startsWith('https://avito')) ||
-        (path.startsWith('//')) ||
-        (path.startsWith('#')) ||
-        (path === '/')) {
-        title = '';
-      }
-      return {
-        title: title.trim(),
-        path,
-      };
-    });
-    return link;
-  } catch (error) {
-    console.error('40', error.message);
-  }
-};
-
-const searhLinks = async (page: Page, itemLink: ILink) => {
+const getPageLinks = async (page: Page, itemLink: ILink) => {
   try {
     const result: Array<ILink> = [];
     const linksList = await page.$$('a');
@@ -49,7 +13,7 @@ const searhLinks = async (page: Page, itemLink: ILink) => {
       return [];
     }
     for (const linksRow of linksList) {
-      const link = await getLink(linksRow);
+      const link = await clearingLink(linksRow);
 
       if (link) {
         const endPath = link.path.slice(link.path.length - 10);
@@ -78,4 +42,4 @@ const searhLinks = async (page: Page, itemLink: ILink) => {
   }
 };
 
-export default searhLinks;
+export default getPageLinks;

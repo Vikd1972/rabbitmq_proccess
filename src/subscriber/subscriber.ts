@@ -1,64 +1,63 @@
+/* eslint-disable max-len */
 /* eslint-disable @typescript-eslint/indent */
 import amqp from 'amqplib';
 
 import config from '../config';
-import jobHandler from '../workers/jobHandler';
 import logger from '../utils/logger';
 
-export type DataType = {
-  severity: string;
-  linkId: number;
-  numberOfStreams?: number;
+export enum PublishedQueueNamesENUM {
+  domainsToParse = 'domainsToParse',
+  parserSettingsUpdate = 'parserSettingsUpdate',
+}
+
+export type OptionsType = {
+  domainId: number;
+  numberOfStreams: number;
 };
 
-const Subscriber = class {
-  queues = ['domain', 'config'];
+class Subscriber {
+  private channel: amqp.Channel;
 
-  channel: Promise<amqp.Channel>;
+  // initialisation RabbitMQ **********
 
   init = async () => {
     const connection = await amqp.connect(config.rabbitHost);
-    this.channel = connection.createChannel();
-    const result = (await this.channel).assertExchange(config.rabbitExchange, 'direct', {
-      durable: false,
-    });
-    const pointExchange = Object.values(await result);
 
-    logger('SUCCESS', 'subscriber.init', `Point of exchange "${pointExchange}" created`);
+    this.channel = await connection.createChannel();
 
-    for (const itemQueue of this.queues) {
-      this.startReceiver(itemQueue);
-    }
-    return pointExchange;
+    logger('SUCCESS', 'subscriber.init', 'Message broker initialized, subscriber is ready');
   };
 
-  startReceiver = async (itemQueue: string) => {
-    const assertQueue = (await this.channel).assertQueue('', {
-      exclusive: true,
+  // receive from queue ***************
+
+  private receiveFromQueue = async (queueName: PublishedQueueNamesENUM, callback: (payload: number | OptionsType) => void) => {
+    let payload: number | OptionsType;
+    await this.channel.assertQueue(queueName, {
+      durable: false,
     });
 
-    logger('INFO', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" waiting for logs. To exit press CTRL+C`);
-    (await this.channel).bindQueue((await assertQueue).queue, config.rabbitExchange, itemQueue);
-
-    (await this.channel).consume((await assertQueue).queue, (msg) => {
+    await this.channel.consume(queueName, (msg) => {
       const data = (msg.content).toString();
-      const currentData = JSON.parse(data) as DataType;
-      logger('INFO', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" received.`);
+      payload = JSON.parse(data);
+      logger('INFO', 'subscriber.receiveFromQueue', `Subscriber on queue "${queueName}" received data`);
 
-      switch (currentData.severity) {
-        case 'domain':
-          jobHandler.startJob(currentData);
-          break;
-        case 'config':
-          jobHandler.validationData(currentData);
-          break;
-        default:
-          logger('WARN', 'subscriber.startReceiver', `Subscriber on queue "${itemQueue}" not exists`);
-      }
+      callback(payload);
     }, {
       noAck: true,
     });
   };
-};
+
+  // start domain parsing queue *******
+
+  startDomainParsing = async (callback: (domainId: number) => void) => {
+    await this.receiveFromQueue(PublishedQueueNamesENUM.domainsToParse, callback);
+  };
+
+  // start settings update queue ******
+
+  startSettingsUpdate = async (callback: (options: OptionsType) => void) => {
+    await this.receiveFromQueue(PublishedQueueNamesENUM.parserSettingsUpdate, callback);
+  };
+}
 
 export default new Subscriber();
