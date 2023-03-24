@@ -9,11 +9,11 @@ const domainParser = new DomainParser();
   try {
     await subscriber.init();
 
-    subscriber.startDomainParsing((domainId: number) => {
-      domainParser.start(domainId);
+    subscriber.onDomainParsing(async (domainId: number) => {
+      await domainParser.start(domainId);
     });
 
-    subscriber.startSettingsUpdate((payload: OptionsType) => {
+    subscriber.onSettingsUpdate((payload: OptionsType) => {
       domainParser.updateConfig(payload);
     });
   } catch (error) {

@@ -3,7 +3,7 @@
 import type { Browser, Page } from 'puppeteer';
 
 import logger from '../utils/logger';
-import createPuppeteerEnv from '../utils/createPuppeteerEnv';
+import puppeteerEnv from '../utils/createPuppeteerEnv';
 import savePageData from './savePageData';
 import startSearch from './srartSearch';
 import scalablePromiseAll from '../utils/scalablePromiseAll';
@@ -26,21 +26,28 @@ class Parsing {
 
   private numberOfStreams = 2;
 
-  constructor(
-  ) {
-    this.parsing = this.parsing.bind(this);
-    this.loadItem = this.loadItem.bind(this);
-    this.runSearch = this.runSearch.bind(this);
-    this.fillingArray = this.fillingArray.bind(this);
-    this.dataInitialization = this.dataInitialization.bind(this);
-    this.chooseUrlsForParsing = this.chooseUrlsForParsing.bind(this);
-  }
+  jobHandler = async (domain: IDomain) => {
+    try {
+      this.domain = domain;
 
-  setBrowser = (browser: Browser) => {
-    this.browser = browser;
+      this.browser = await puppeteerEnv.createBrowser();
+
+      const firstResult = await this.parsing(domain);
+      const sekondResult = await this.parsing(firstResult);
+
+      if (sekondResult) {
+        logger('WARN', 'DomainParser.environmentInitialization', `PROCESS WITH ID ${this.domain.id} FREE, FIND ${sekondResult.length} LINKS`);
+      }
+
+      await this.browser.close();
+
+      return this.domain.id;
+    } catch (error) {
+      logger('ERROR', 'DomainParser.environmentInitialization', error.message);
+    }
   };
 
-  parsing = async (
+  private parsing = async (
     linksList: ILink[] | IDomain,
   ) => {
     try {
@@ -85,7 +92,7 @@ class Parsing {
 
   private chooseUrlsForParsing = async (index: number) => {
     try {
-      const page = await createPuppeteerEnv.createPage(this.browser);
+      const page = await puppeteerEnv.createPage(this.browser);
       while (this.workinglinksList.length) {
         const link = this.workinglinksList.pop();
         const getMetrics = await this.runSearch(link, page);
@@ -117,7 +124,8 @@ class Parsing {
     if (!numberOfStreams) {
       logger('WARN', 'Parsing.updateConfig', `VAVIDATION ERROR, NUMBER OF STREAMS FOR ID ${this.domain.id} IS NOT SPECIFIED CORRECTLY`);
       return;
-    } if (this.numberOfStreams === numberOfStreams) {
+    }
+    if (this.numberOfStreams === numberOfStreams) {
       logger('WARN', 'Parsing.updateConfig', `VAVIDATION ERROR, NUMBER OF STREAMS FOR ID ${this.domain.id} HAS NOT CHANGED`);
       return;
     }

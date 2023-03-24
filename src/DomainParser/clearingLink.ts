@@ -20,10 +20,12 @@ const clearingLink = async (linksRow: ElementHandle<HTMLAnchorElement>) => {
         .split('"')[0]
         .split('?')[0]
         .split('-')[0];
-      if ((path.startsWith('https://avito')) ||
-        (path.startsWith('//')) ||
-        (path.startsWith('#')) ||
-        (path === '/')) {
+      if (
+        path.startsWith('https://avito') ||
+        path.startsWith('//') ||
+        path.startsWith('#') ||
+        path === '/'
+      ) {
         title = '';
       }
       return {

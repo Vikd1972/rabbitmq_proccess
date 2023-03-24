@@ -15,6 +15,7 @@ const startSearch = async (link: ILink, page: Page, initialArray: ILink[], resul
   const getMetrics = await page.metrics();
 
   const result = await getPageLinks(page, link);
+
   for (const oneLink of result) {
     const checkPathByOriginArray = initialArray.findIndex((item) => item.path === oneLink.path);
     const checkPathByResultArray = resultArray.findIndex((item) => item.path === oneLink.path);

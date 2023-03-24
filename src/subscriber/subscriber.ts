@@ -31,14 +31,13 @@ class Subscriber {
   // receive from queue ***************
 
   private receiveFromQueue = async (queueName: PublishedQueueNamesENUM, callback: (payload: number | OptionsType) => void) => {
-    let payload: number | OptionsType;
     await this.channel.assertQueue(queueName, {
       durable: false,
     });
 
     await this.channel.consume(queueName, (msg) => {
       const data = (msg.content).toString();
-      payload = JSON.parse(data);
+      const payload = JSON.parse(data);
       logger('INFO', 'subscriber.receiveFromQueue', `Subscriber on queue "${queueName}" received data`);
 
       callback(payload);
@@ -49,13 +48,13 @@ class Subscriber {
 
   // start domain parsing queue *******
 
-  startDomainParsing = async (callback: (domainId: number) => void) => {
+  onDomainParsing = async (callback: (domainId: number) => void) => {
     await this.receiveFromQueue(PublishedQueueNamesENUM.domainsToParse, callback);
   };
 
   // start settings update queue ******
 
-  startSettingsUpdate = async (callback: (options: OptionsType) => void) => {
+  onSettingsUpdate = async (callback: (options: OptionsType) => void) => {
     await this.receiveFromQueue(PublishedQueueNamesENUM.parserSettingsUpdate, callback);
   };
 }

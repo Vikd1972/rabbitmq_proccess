@@ -2,11 +2,9 @@
 import puppeteer, { executablePath } from 'puppeteer';
 import type { Browser } from 'puppeteer';
 
-const CreatePuppeteerEnv = class {
-  browser: Browser;
-
+class PuppeteerEnv {
   createBrowser = async () => {
-    this.browser = await puppeteer.launch({
+    const browser = await puppeteer.launch({
       ignoreDefaultArgs: ['--disable-extensions'],
       headless: false,
       args: [
@@ -16,7 +14,7 @@ const CreatePuppeteerEnv = class {
       ],
       executablePath: executablePath(),
     });
-    return this.browser;
+    return browser;
   };
 
   createPage = async (browser: Browser) => {
@@ -28,6 +26,6 @@ const CreatePuppeteerEnv = class {
     page.setDefaultNavigationTimeout(60000);
     return page;
   };
-};
+}
 
-export default new CreatePuppeteerEnv();
+export default new PuppeteerEnv();

@@ -4,8 +4,7 @@ import type { Browser } from 'puppeteer';
 
 import logger from '../utils/logger';
 import getLink from '../api/getLink';
-import createPuppeteerEnv from '../utils/createPuppeteerEnv';
-import Parsing from './Parsing';
+import Parsing from './Parser';
 import type { IDomain } from '../types';
 import type { OptionsType } from '../subscriber/Subscriber';
 
@@ -14,12 +13,7 @@ class DomainParser {
 
   private parsing: Record<string, Parsing> = {};
 
-  private browser: Browser;
-
-  constructor(
-  ) {
-    this.jobHandler = this.jobHandler.bind(this);
-  }
+  private browser: Record<string, Browser> = {};
 
   start = async (domainId: number) => {
     try {
@@ -32,35 +26,15 @@ class DomainParser {
 
       this.domainsInOperation.push(domain);
 
-      this.jobHandler(domain);
-    } catch (err) {
-      logger('ERROR', 'DomainParser.start', err.message);
-    }
-  };
-
-  private jobHandler = async (domain: IDomain) => {
-    try {
-      this.browser = await createPuppeteerEnv.createBrowser();
-
       this.parsing[domain.id] = new Parsing();
 
-      this.parsing[domain.id].setBrowser(this.browser);
+      const idDomain = await this.parsing[domain.id].jobHandler(domain);
 
-      const result1pass = await this.parsing[domain.id].parsing(domain);
-      const result2pass = await this.parsing[domain.id].parsing(result1pass);
-
-      if (result2pass) {
-        logger('WARN', 'DomainParser.environmentInitialization', `PROCESS WITH ID ${domain.id} FREE, FIND ${result1pass.length} LINKS`);
-        const domainsInOperationIndex = this.domainsInOperation
-          .findIndex((domainItem: IDomain) => domainItem.id === domain.id);
-        this.domainsInOperation.splice(domainsInOperationIndex, 1);
-      }
-
-      await this.browser.close();
-
-      return;
-    } catch (error) {
-      logger('ERROR', 'DomainParser.environmentInitialization', error.message);
+      const domainsInOperationIndex = this.domainsInOperation
+        .findIndex((domainItem: IDomain) => domainItem.id === idDomain);
+      this.domainsInOperation.splice(domainsInOperationIndex, 1);
+    } catch (err) {
+      logger('ERROR', 'DomainParser.start', err.message);
     }
   };
 
